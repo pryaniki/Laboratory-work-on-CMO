@@ -15,7 +15,7 @@ class Event:
 
     """
 
-    def __init__(self, number=0, event_time=0, event_type=0, status_system=0, remain_time=0, wait_time=0,
+    def __init__(self, number=0, event_time=0., event_type=0, status_system=0, time_until_end_service=0., wait_time=0.,
                  number_application=0):
         """
 
@@ -23,7 +23,7 @@ class Event:
         :param event_time: момент наступления события (default 0)
         :param event_type: тип события (default 0)
         :param status_system: состояния СМО (default 0)
-        :param remain_time: оставшееся время обслуживания (default 0)
+        :param time_until_end_service: оставшееся время обслуживания (default 0)
         :param wait_time: время ожидания новой заявки (default 0)
         :param number_application номер заявки, участвующей в событии (default 0)
 
@@ -32,7 +32,7 @@ class Event:
         self.event_time = event_time
         self.event_type = event_type
         self.status_system = status_system
-        self.remain_time = remain_time
+        self.time_until_end_service = time_until_end_service
         self.wait_time = wait_time
         self.num_application = number_application
         self._data_len = 7
@@ -43,5 +43,5 @@ class Event:
 
     def get_data_for_report(self):
         """Возвращает список из всех атрибутов класса."""
-        return [self.num, self.event_time, self.event_type, self.status_system, self.remain_time,
+        return [self.num, self.event_time, self.event_type, self.status_system, self.time_until_end_service,
                 self.wait_time, self.num_application]

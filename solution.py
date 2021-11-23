@@ -7,7 +7,6 @@
 
 import os
 import json
-import numpy as np
 
 
 from collections import deque, Counter
@@ -15,9 +14,6 @@ from Controller_SMO import Controller_SMO
 from Event import Event
 from Application import Application
 from ListWrapper import ListWrapper
-
-
-
 
 
 def _get_initial_data(n_task: int, f_name: str) -> tuple[bool, dict]:
@@ -42,11 +38,11 @@ def process_app_from_queue(q: deque, n_task: int, event: Event, past_event: Even
     event.event_type = 1
 
     if is_write_to_file:
-        event.remain_time = _get_service_time_by_requests(n_task)
+        event.time_until_end_service = _get_service_time_by_requests(n_task)
         event.wait_time = past_event.wait_time
-        data[str(event.num)] = [event.event_time, event.remain_time, event.wait_time]
+        data[str(event.num)] = [event.event_time, event.time_until_end_service, event.wait_time]
     else:
-        event.remain_time = data[str(event.num)][1]
+        event.time_until_end_service = data[str(event.num)][1]
         event.wait_time = data[str(event.num)][2]
     event.num_application = q.popleft()
     event.status_system = len(q) + 1
@@ -54,7 +50,7 @@ def process_app_from_queue(q: deque, n_task: int, event: Event, past_event: Even
 
     app.start_service = event.event_time
     app.stay_in_queue = app.start_service - app.app_time
-    app.service_time = event.remain_time
+    app.service_time = event.time_until_end_service
     app.end_time = app.start_service + app.service_time
     return app.number
 
@@ -66,14 +62,14 @@ def process_current_app(q: deque, n_task: int, event: Event, past_event: Event, 
     event.event_type = 1
     event.status_system = len(q)+1
 
-    event.remain_time = _get_service_time_by_requests(n_task)
+    event.time_until_end_service = _get_service_time_by_requests(n_task)
     event.wait_time = _get_time_between_applications(n_task)
     if is_write_to_file:
-        event.remain_time = _get_service_time_by_requests(n_task)
+        event.time_until_end_service = _get_service_time_by_requests(n_task)
         event.wait_time = _get_time_between_applications(n_task)
-        data[str(event.num)] = [event.event_time, event.remain_time, event.wait_time]
+        data[str(event.num)] = [event.event_time, event.time_until_end_service, event.wait_time]
     else:
-        event.remain_time = data[str(event.num)][1]
+        event.time_until_end_service = data[str(event.num)][1]
         event.wait_time = data[str(event.num)][2]
     app.number = len(table2) + 1
     event.num_application = app.number
@@ -82,7 +78,7 @@ def process_current_app(q: deque, n_task: int, event: Event, past_event: Event, 
     app.place_in_queue = 0
     app.stay_in_queue = 0
     app.start_service = event.event_time
-    app.service_time = event.remain_time
+    app.service_time = event.time_until_end_service
     app.end_time = app.start_service + app.service_time
     table2.append(app)
     return app.number
@@ -101,19 +97,19 @@ def process_application(q: deque, n_task: int, event: Event, past_event: Event, 
 def completes_app_processing(n_task, q: deque, event: Event, past_event: Event, num_serviced_app: int, table2, num_states_app):
     """Завершает обработку заявки"""
     from constants import NUM_EVENTS
-    event.event_time = past_event.event_time + past_event.remain_time
+    event.event_time = past_event.event_time + past_event.time_until_end_service
     event.event_type = 2
     event.status_system = len(q)
     if q and num_states_app + 1 == NUM_EVENTS:
-        event.remain_time = _get_service_time_by_requests(n_task)
+        event.time_until_end_service = _get_service_time_by_requests(n_task)
         app = table2[num_serviced_app-1]  # !?????
         app.start_service = event.event_time
         app.stay_in_queue = app.start_service - app.app_time
-        app.service_time = event.remain_time
+        app.service_time = event.time_until_end_service
         app.end_time = app.start_service + app.service_time
     else: #  очередь пуста
-        event.remain_time = -1
-    event.wait_time = past_event.wait_time - past_event.remain_time
+        event.time_until_end_service = -1
+    event.wait_time = past_event.wait_time - past_event.time_until_end_service
     event.num_application = num_serviced_app
 
 
@@ -125,12 +121,12 @@ def add_app_to_queue(q: deque, n_task: int, event: Event, past_event: Event, app
     event.event_type = 1
     event.status_system = len(q)
     if is_write_to_file:
-        event.remain_time = _get_service_time_by_requests(n_task)
+        event.time_until_end_service = _get_service_time_by_requests(n_task)
         event.wait_time = _get_time_between_applications(n_task)
-        data[str(event.num)] = [event.event_time, event.remain_time, event.wait_time]
+        data[str(event.num)] = [event.event_time, event.time_until_end_service, event.wait_time]
     else:
         event.wait_time = data[str(event.num)][2]
-    event.remain_time = past_event.remain_time - past_event.wait_time
+    event.time_until_end_service = past_event.time_until_end_service - past_event.wait_time
 
     app.number = len(table2) + 1
     q.append(app.number)
@@ -151,11 +147,11 @@ def change_table_1(table, table2):
     for event in table:
 
         if event.event_time != past_time:
-            if event.status_system != 0 and event.remain_time == -1:
+            if event.status_system != 0 and event.time_until_end_service == -1:
                 #print(f'заявка {event.num_application+1}')
 
                 #print(f'Меняю {event.remain_time} на {table2[event.num_application].service_time} ')
-                event.remain_time = table2[event.num_application].service_time
+                event.time_until_end_service = table2[event.num_application].service_time
                 #print(f'В строке{num_row + 1}]\n\n')
 
             event.num = num_row
@@ -175,6 +171,7 @@ def event_handler(n_task: int) -> list[list[Event] | list[Application]]:
     smo = Controller_SMO(NUM_SMO, n_task, f_name)
     print(smo)
     result = smo.start_system(NUM_EVENTS)
+    print('I`m here')
 
     return result
 

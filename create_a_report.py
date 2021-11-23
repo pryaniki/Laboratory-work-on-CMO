@@ -29,10 +29,10 @@ def get_data_for_report() -> tuple:
     """  Получает данные для заполнения таблиц 1, 2 для задач 1, 2, 3, 4  """
 
     tables_task_1 = event_handler(1)
-    tables_task_2 = event_handler(2)
-    tables_task_3 = event_handler(3)
-
-    tables_task_4 = get_data_for_an_calc([tables_task_1, tables_task_2, tables_task_3])
+    #tables_task_2 = event_handler(2)
+    #tables_task_3 = event_handler(3)
+    tables_task_4, tables_task_2, tables_task_3 = [], [], []
+    #tables_task_4 = get_data_for_an_calc([tables_task_1, tables_task_2, tables_task_3])
 
     return tables_task_1, tables_task_2, tables_task_3, tables_task_4
 

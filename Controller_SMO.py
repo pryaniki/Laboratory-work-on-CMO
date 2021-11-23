@@ -34,28 +34,45 @@ class Controller_SMO:
                 1 : Система массового обслуживания (D|M|n)
                 2 : Система массового обслуживания (M|D|n)
                 3 : Система массового обслуживания (M|M|n)
+
+
+        device_id_completing_app : ind (default -1)
+            Номер прибора, который быстрее всех заканчивает обслуживание заявки
+        number_app_now : int (default 0)
+                Количество заявок, находящихся в СМО в данный момент
+        current_event_number : int (default 1)
+                Номер события, которое обслуживается сейчас
+        current_app_number : int (default 1)
+                Номер заявки, которая обслуживается сейчас
+
+
+        min_app_service_time : float (default 0.)
+                Минимальное время обслуживания заявки
+        time_arrival_next_app : float (default 0.)
+                Время прихода следующей заявки
+        event_start_time : float (default 0.)
+                Время наступления события
+
         devices_list : list[Device]  (default [])
                 Список подчиненных приборов
-        q :   deque (default deque())
-                Очередь заявок
-        min_app_service_time : int (default 0)
-                Минимальное время обслуживания заявки
-        selection : dict (default {})
-                Выборка данный, для работы приборов. Нужна чтоб повторить прошлый результат выполнения программы
-        f_selection_to_file : bool (default True)
-                Флаг, нужно ли записывать выборку в файл или нет.
-                    True : Файл нужно записать
-                    False : Файл с выборкой записан, записывать не надо
         event_table : list[Event] (default [])
                 Таблица событий
         application_table : list[Application] (default [])
                 Таблица заявок
-        number_app_now : int (default 0)
-                Количество заявок, находящихся в СМО в данный момент
-        time_arrival_next_app : float (default 0.)
-                Время прихода следующей заявки
+
+        q :   deque (default deque())
+                Очередь заявок
+
+        selection : dict (default {})
+                Выборка данный, для работы приборов. Нужна чтоб повторить прошлый результат выполнения программы
+
+        f_selection_to_file : bool (default True)
+                Флаг, нужно ли записывать выборку в файл или нет.
+                    True : Файл нужно записать
+                    False : Файл с выборкой записан, записывать не надо
+
         f_name_with_selection : str (default' selection.txt')
-                Имя файла в котором, либо содержится выборка, либо ее надо в него записать
+                Имя файла в котором, либо содержится выборка, либо ее надо в него записать\
        Методы
        ------
         ***
@@ -71,14 +88,18 @@ class Controller_SMO:
     type_system = 1
     devices_list: list[Device] = []
     q = deque()
-    min_app_service_time = 0
+    min_app_service_time = 0.
     selection = {}
     f_selection_to_file = True
     event_table: list[Event] = []
     application_table: list[Application] = []
     number_app_now = 0
     time_arrival_next_app = 0.
+    event_start_time = 0.
+    current_event_number = 1
+    current_app_number = 1
     f_name_with_selection = 'selection.txt'
+    device_id_completing_app = -1
 
     # Время обращения к прибору или время, через которое обратились к прибору
 
@@ -88,38 +109,48 @@ class Controller_SMO:
         self.devices_list = [Device(number=i) for i in range(num)]
         self.type_system = type_
         self._get_selection(f_name)
-        self.time_arrival_next_app = self.selection['1'][2]
         self.f_name_with_selection = f_name
 
     def __repr__(self):
         return f'{self.devices_list}'
 
+    def service_first_app(self):
+        """Пришла заявка, обрабатываем ее"""
+
+        # Получаем данные
+        self.event_start_time = self.selection['1'][0]
+        self.time_arrival_next_app = self.selection['1'][2]
+        self.min_app_service_time = self.selection['1'][1]
+
+        #   Заносим информацию о событии
+        event = Event(1, self.event_start_time, 1, 1, self.min_app_service_time, self.time_arrival_next_app, 1)
+
+        device = self._search_free_device()
+        device.give_task(self.current_app_number, self.selection['1'][1])
+        print(device)
+
+        end_time = event.event_time + event.time_until_end_service
+
+        app = Application(1, event.event_time, 0, 0, event.event_time, event.time_until_end_service, end_time)
+
+        # Для дальнейшей работы
+        self.number_app_now = 1
+        self.current_event_number = 1
+
+        self.event_table.append(event)
+        self.application_table.append(app)
+
     def start_system(self, num_event: int):
         """Запустить моделирование событий"""
+        # обработка 1-й заявки
+        self.service_first_app()
+        while self.current_event_number < num_event:
+            self._define_event_type()
 
-        event = Event(1, self.selection['1'][0], 1, 1, self.selection['1'][1], self.selection['1'][2], 1)
-
-        end_time = event.event_time + event.remain_time
-        app = Application(1, event.event_time, 0, 0, event.event_time, event.remain_time, end_time)
-        self.event_table = [event]
-        self.application_table = [app]
-        self.min_app_service_time = event.remain_time
-        self.number_app_now = 1
-        # past_event: dict[Device, Event] = {Device(i): 0 for i in range(self.num_devices)}
-
-        num_serviced_app = 1  # Номер обслуженной заявки
-        num_processed_event = 1  # Номер обработанного события
-
-        while num_processed_event < num_event:
-            event = Event(number=event.num + 1)
-            app = Application()
-            self._define_event_type(num_processed_event, event, app)
-
-            self.event_table.append(event)
         _selection_to_file(self.selection, self.f_name_with_selection)
         return [self.event_table, self.application_table]
 
-    def _define_event_type(self, num_processed_event: int, event: Event, app: Application):
+    def _define_event_type(self):
         """
         Определяет тип события
                 1) СМО обрабатывает заявку
@@ -128,17 +159,26 @@ class Controller_SMO:
                 2) СМО завершает работу над заявкой
                 3) СМО добавляет поступившую заявку в очередь
 
+            Есть свободный прибор
+            - отдаем заявку ему на обработку
+            - заявка отдается прибору, с наименьшим номером
+        Нет свободных приборов
+            - заносим заявку в очередь
+            - ставим -1 в Таблице 2
         """
 
-        #  Обновление self.min_app_service_time
-        #  Обновление self.time_arrival_next_app
         if self._search_free_device():  # есть хоть 1 свободный прибор
-            self._processing_application(event, app)
+            self._processing_application()
         elif self.min_app_service_time < self.time_arrival_next_app:  # Заявка завершится быстрее, чем придет новая
-            pass
+            self.current_event_number += 1
+            self.number_app_now -= 1
+            self._completes_app_processing(self.devices_list[self.device_id_completing_app])
         elif self.min_app_service_time > self.time_arrival_next_app:  # пришла заявка, но все приборы заняты
-            pass
-            self._add_app_to_queue(event, app)
+            self.current_event_number += 1
+            self.current_app_number += 1
+            self.number_app_now += 1
+
+            self._add_app_to_queue()
         else:
             raise Exception('Необработанный случай')
 
@@ -177,119 +217,141 @@ class Controller_SMO:
         return result
 
     def _update_min_app_service_time(self, time):
-        """ Опрашивает все занятые приборы и получает минимальное время до завершения обслуживания заявки"""
+        """
+        Опрашивает все занятые приборы и получает номер  прибора и минимальное время до завершения обслуживания заявки
+
+        Изменяет
+            self.min_app_service_time
+            self.device_id_completing_app
+        """
+        self.min_app_service_time = np.inf
         for devise in self.devices_list:
-            if not devise.is_free():
-                ### Узнать как посчитать время time
-                value = devise.get_time_until_end_service_app(time)
+            if not devise.is_free():  # прибор работает над заявкой
+                value = devise.update_time_until_end_service_app(time)
                 if self.min_app_service_time > value:
                     self.min_app_service_time = value
-            else:
-                break
+                    self.device_id_completing_app = devise.get_number()
+        if np.inf == self.min_app_service_time:  # все приборы свободны
+            self.min_app_service_time = -1
+            self.device_id_completing_app = -1
 
-    def _processing_application(self, event: Event, app: Application):
-        """
-
-        Обрабатывает полученную заявку
-
-        Есть свободный прибор
-            - отдаем заявку ему на обработку
-            - заявка отдается прибору, с наименьшим номером
-        Нет свободных приборов
-            - заносим заявку в очередь
-            - ставим -1 в Таблице 2
-        
-        """
+    def _processing_application(self):
+        """ Обрабатывает полученную заявку или достает ее из очереди"""
         device = self._search_free_device()
         if self.q:  # достаем заявку из очереди
-            return self._process_app_from_queue(event, device)
+            self._process_app_from_queue(device)
         else:  # пришла заявка
-            return self._process_current_app(event, app, device)
+            self.current_event_number += 1
+            self.current_app_number += 1
+            self.number_app_now += 1
+            self._process_current_app(device)
 
-    def _process_current_app(self, event: Event,  app: Application, device: Device) -> int:
+    def _process_current_app(self, device: Device):
         """ Отдаем заявку на обслуживание прибору """
-        Device
-        event.event_time = past_event.event_time + past_event.wait_time
-        event.event_type = 1
-        self.number_app_now += 1
-        event.status_system = self.number_app_now
 
-        event.remain_time = _get_service_time_by_requests(self.type_system)
-        event.wait_time = _get_time_between_applications(self.type_system)
+        self.event_start_time = self.event_start_time + self.time_arrival_next_app
+
         if self.f_selection_to_file:
-            event.remain_time = _get_service_time_by_requests(self.type_system)
-            event.wait_time = _get_time_between_applications(self.type_system)
-            self.selection[str(event.num)] = [event.event_time, event.remain_time, event.wait_time]
+            time_until_end_service = _get_service_time_by_requests(self.type_system)
+            self.time_arrival_next_app = _get_time_between_applications(self.type_system)
+            self.selection[str(self.current_event_number)] = [time_until_end_service,
+                                                              self.time_arrival_next_app,
+                                                              ]
         else:
-            event.remain_time = self.selection[str(event.num)][1]
-            event.wait_time = self.selection[str(event.num)][2]
-        app.number = len(self.application_table) + 1
-        event.num_application = app.number
+            time_until_end_service = self.selection[str(self.current_event_number)][0]
+            self.time_arrival_next_app = self.selection[str(self.current_event_number)][1]
 
-        app.app_time = event.event_time
-        app.place_in_queue = 0
-        app.stay_in_queue = 0
-        app.start_service = event.event_time
-        app.service_time = event.remain_time
-        app.end_time = app.start_service + app.service_time
+        device.give_task(self.current_app_number, time_until_end_service)
+
+        event = Event(number=self.current_event_number,
+                      event_time=self.event_start_time,
+                      event_type=1,
+                      status_system=self.number_app_now,
+                      time_until_end_service=self.min_app_service_time,
+                      wait_time=self.time_arrival_next_app,
+                      number_application=self.current_app_number,
+                      )
+        app = Application(number=self.current_app_number,
+                          application_time=self.event_start_time,
+                          place_in_queue=0,
+                          staying_in_queue=0,
+                          start_service=self.event_start_time,
+                          service_time=time_until_end_service,
+                          end_time=self.event_start_time + time_until_end_service,
+                          )
+        self.event_table.append(event)
         self.application_table.append(app)
-        return app.number
 
-    def _process_app_from_queue(self, event: Event, device: Device) -> int:
+    def _process_app_from_queue(self, device: Device):
         """Обрабатывает заявку из очереди, возвращает номер обслуженной заявки"""
 
-        event.event_time = past_event.event_time
-        event.event_type = 1
-
+        num_app = self.q.popleft()
         if self.f_selection_to_file:
-            event.remain_time = _get_service_time_by_requests(self.type_system)
-            event.wait_time = past_event.wait_time
-            self.selection[str(event.num)] = [event.event_time, event.remain_time, event.wait_time]
-
+            time_until_end_service = _get_service_time_by_requests(self.type_system)
+            self.selection[str(self.current_event_number)] = [time_until_end_service,
+                                                              self.time_arrival_next_app]
         else:
-            event.remain_time = self.selection[str(event.num)][1]
-            event.wait_time = self.selection[str(event.num)][2]
-        event.num_application = self.q.popleft()
-        event.status_system = self.number_app_now
-        app = self.application_table[event.num_application - 1]  # !?????
+            time_until_end_service = self.selection[str(self.current_event_number)][0]
+            self.time_arrival_next_app = self.selection[str(self.current_event_number)][1]  # ???
 
-        app.start_service = event.event_time
+        device.give_task(num_app, time_until_end_service)
+
+        app = self.application_table[num_app - 1]
+        app.start_service = self.event_start_time
         app.stay_in_queue = app.start_service - app.app_time
-        app.service_time = event.remain_time
+        app.service_time = time_until_end_service
         app.end_time = app.start_service + app.service_time
-        return app.number
 
-    def _completes_app_processing(self, event: Event, past_event: Event, num_serviced_app: int):
+        self.application_table.append(app)
+
+    def _completes_app_processing(self, device: Device):
         """Завершает обработку заявки"""
-        event.event_time = past_event.event_time + past_event.remain_time
-        event.event_type = 2
-        self.number_app_now -= 1
-        event.status_system = self.number_app_now
-        event.remain_time = -1
-        event.wait_time = past_event.wait_time - past_event.remain_time
-        event.num_application = num_serviced_app
+        print(device)
+        device.end_task() # тут ли разместить?
 
-    def _add_app_to_queue(self, event: Event, app: Application):
+        self.event_start_time = self.event_start_time + self.min_app_service_time
+
+        self.time_arrival_next_app = self.time_arrival_next_app - self.min_app_service_time
+        self._update_min_app_service_time(self.min_app_service_time)
+
+        event = Event(number=self.current_event_number,
+                      event_time=self.event_start_time,
+                      event_type=2,
+                      status_system=self.number_app_now,
+                      time_until_end_service=self.min_app_service_time,
+                      wait_time=self.time_arrival_next_app,
+                      number_application=self.current_app_number,
+                      )
+        self.event_table.append(event)
+
+    def _add_app_to_queue(self):
         """Добавляем заявку в очередь"""
 
-        event.event_time = past_event.event_time + past_event.wait_time
-        event.event_type = 1
-        event.status_system = self.number_app_now
-        if self.f_selection_to_file:
-            event.remain_time = _get_service_time_by_requests(self.type_system)
-            event.wait_time = _get_time_between_applications(self.type_system)
-            self.selection[str(event.num)] = [event.event_time, event.remain_time, event.wait_time]
-        else:
-            event.wait_time = self.selection[str(event.num)][2]
-        event.remain_time = past_event.remain_time - past_event.wait_time
+        self.event_start_time = self.event_start_time + self.time_arrival_next_app
+        self._update_min_app_service_time(self.time_arrival_next_app)
 
-        app.number = len(self.application_table) + 1
-        self.q.append(app.number)
-        self.number_app_now += 1
-        event.status_system = self.number_app_now
-        event.num_application = len(self.application_table) + 1
-        app.app_time = event.event_time
-        app.place_in_queue = len(self.q)
+        if self.f_selection_to_file:
+            service_time = _get_service_time_by_requests(self.type_system)
+            self.time_arrival_next_app = _get_time_between_applications(self.type_system)
+            self.selection[str(self.current_event_number)] = [service_time, self.time_arrival_next_app]
+        else:
+            self.time_arrival_next_app = self.selection[str(self.current_event_number)][1]
+
+        self.q.append(self.current_app_number)
+
+        event = Event(number=self.current_event_number,
+                      event_time=self.event_start_time,
+                      event_type=1,
+                      status_system=self.number_app_now,
+                      time_until_end_service=self.min_app_service_time,
+                      wait_time=self.time_arrival_next_app,
+                      number_application=self.current_app_number,
+                      )
+        app = Application(number=self.current_app_number,
+                          application_time=self.event_start_time,
+                          place_in_queue=len(self.q),
+                          )
+        self.event_table.append(event)
         self.application_table.append(app)
 
 

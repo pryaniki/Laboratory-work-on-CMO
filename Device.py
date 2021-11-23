@@ -63,16 +63,23 @@ class Device:
 
     def end_task(self):
         self._num_serviced_applications.append(self._num_app)
+        tmp = self._num_app
         self._num_app = -1
         self._free = True
         self._time_until_end_service_app = 0
+        return tmp
 
     def get_number(self):
         return self._number
 
     def update_time_until_end_service_app(self, time: float) -> float:
         """Обновляет значение _time_until_end_service_app"""
-        self._time_until_end_service_app = self._time_until_end_service_app - time
+        if self._time_until_end_service_app < time:
+            pass
+            # raise Exception(f'У прибора №{self._number} получается отрицательное время до конца заявки \n{self._time_until_end_service_app} - { time}')
+        if not self._time_until_end_service_app == 0:
+            self._time_until_end_service_app = self._time_until_end_service_app - time
+
         return self._time_until_end_service_app
 
     def get_time_until_end_service_app(self) -> float:

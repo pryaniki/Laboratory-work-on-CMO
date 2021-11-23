@@ -169,7 +169,7 @@ def event_handler(n_task: int) -> list[list[Event] | list[Application]]:
 
     f_name = f'table1_task{n_task}.txt'
     smo = Controller_SMO(NUM_SMO, n_task, f_name)
-    print(smo)
+    #print(smo)
     result = smo.start_system(NUM_EVENTS)
     print('I`m here')
 

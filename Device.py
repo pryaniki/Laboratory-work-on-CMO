@@ -75,10 +75,11 @@ class Device:
     def update_time_until_end_service_app(self, time: float) -> float:
         """Обновляет значение _time_until_end_service_app"""
         if self._time_until_end_service_app < time:
-            pass
-            # raise Exception(f'У прибора №{self._number} получается отрицательное время до конца заявки \n{self._time_until_end_service_app} - { time}')
-        if not self._time_until_end_service_app == 0:
+            raise Exception(f'У прибора №{self._number} получается отрицательное время до конца заявки \n{self._time_until_end_service_app} - { time}')
+        if self._time_until_end_service_app != 0 and self._time_until_end_service_app != time:
             self._time_until_end_service_app = self._time_until_end_service_app - time
+        else:
+            return 0
 
         return self._time_until_end_service_app
 

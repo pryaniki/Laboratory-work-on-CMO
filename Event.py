@@ -41,6 +41,10 @@ class Event:
         """Возвращает количество атрибутов в классе."""
         return self._data_len
 
+    def __repr__(self):
+        return f'{self.num}, {self.event_time}, {self.event_type}, {self.status_system}, {self.time_until_end_service},' \
+               f'{self.wait_time}, {self.num_application}'
+
     def get_data_for_report(self):
         """Возвращает список из всех атрибутов класса."""
         return [self.num, self.event_time, self.event_type, self.status_system, self.time_until_end_service,

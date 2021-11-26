@@ -15,7 +15,7 @@ def write_report_on_task(n_task: int, document, tables: list[[list[Application] 
         2: 'Система массового обслуживания (M|D|n).',
         3: 'Система массового обслуживания (M|M|n).'
     }
-
+    print(tables[0])
     document.add_paragraph(dic[n_task+1])
     widths = (Inches(0.4), Inches(1), Inches(0.3), Inches(0.3), Inches(1), Inches(1), Inches(0.3))
     fill_table_for_report(document, tables[0], widths)
@@ -46,7 +46,7 @@ def create_report(variant, path_to_cond='lab_3.txt', doc_name='Report.doc'):
     variant = data.variant
     name = data.name
     set_c(*data.data)
-    #data_for_report = get_data_for_report()
+    data_for_report = get_data_for_report()
 
     from constants import NUM_SMO, SERVICE_TIME, DELTA_T, LAMBD, MU
 
@@ -57,10 +57,10 @@ def create_report(variant, path_to_cond='lab_3.txt', doc_name='Report.doc'):
     document.add_paragraph(name)
     document.add_paragraph(conditions)
     #write_report_on_task(0, document, data_for_report[0], conditions)
-    tables_task_2 = event_handler(2)
-    write_report_on_task(0, document, tables_task_2, conditions)
-    #for i in range(3):
-   #     write_report_on_task(i, document, data_for_report[i], conditions)
+    #tables_task_2 = event_handler(2)
+    #write_report_on_task(0, document, tables_task_2, conditions)
+    for i in range(3):
+        write_report_on_task(i, document, data_for_report[i], conditions)
     #fill_table_analysis_of_calculations(document, data_for_report[3])
 
 

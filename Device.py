@@ -72,6 +72,9 @@ class Device:
     def get_number(self):
         return self._number
 
+    def get_number_app(self):
+        return self._num_app
+
     def update_time_until_end_service_app(self, time: float) -> float:
         """Обновляет значение _time_until_end_service_app"""
         if self._time_until_end_service_app < time:

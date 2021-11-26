@@ -1,6 +1,6 @@
 
 NUM_FOR_ROUND = 5
-NUM_EVENTS = 101
+NUM_EVENTS = 100
 
 NUM_SMO = None  # количество доступных приборов
 SERVICE_TIME = None  # время между приходом заявок

@@ -83,36 +83,29 @@ class Controller_SMO:
         ****
 
        """
-
-    num_devices = 1
-    type_system = 1
-    devices_list: list[Device] = []
-    q = deque()
-    min_app_service_time = 0.
     selection = {}
-    f_selection_to_file = True
-    event_table: list[Event] = []
-    application_table: list[Application] = []
-    number_app_now = 0
-    time_arrival_next_app = 0.
-    event_start_time = 0.
-    current_event_number = 1
-    current_app_number = 1
-    f_name_with_selection = 'selection.txt'
-    device_id_completing_app = 0
-    lst_serv_apps_tmp =[]
-
-    _app_list_need_to_compl = []  # Номера заявок, которые надо завершить
-
-    # Время обращения к прибору или время, через которое обратились к прибору
-
     def __init__(self, num: int, type_: int, f_name: str):
 
         self.num_devices = num
-        self.devices_list = [Device(number=i) for i in range(num)]
+        self.devices_list: list[Device] = [Device(number=i) for i in range(num)]
         self.type_system = type_
         self._get_selection(f_name)
         self.f_name_with_selection = f_name
+        self.event_table: list[Event] = []
+        self.application_table: list[Application] = []
+        self.q = deque()
+        self.min_app_service_time = 0.
+        self.f_selection_to_file = True
+        self.number_app_now = 0
+        self.time_arrival_next_app = 0.
+        self.event_start_time = 0.
+        self.current_event_number = 1
+        self.current_app_number = 1
+        self.device_id_completing_app = 0
+        self.lst_serv_apps_tmp = []
+
+        self.temp = {}
+        self._app_list_need_to_compl = []  # Номера заявок, которые надо завершить
 
     def __repr__(self):
         return f'{self.devices_list}'
@@ -120,18 +113,15 @@ class Controller_SMO:
     def service_first_app(self):
         """Пришла заявка, обрабатываем ее"""
 
-        # Получаем данные
         self.current_event_number = 1
         self.event_start_time = self.selection['1'][0]
         self.min_app_service_time = self.selection['1'][1]
         self.time_arrival_next_app = self.selection['1'][2]
 
-        #   Заносим информацию о событии
         event = Event(self.current_event_number, self.event_start_time, 1, 1, self.min_app_service_time, self.time_arrival_next_app, 1)
 
         device = self._search_free_device()
         device.give_task(self.current_app_number, self.min_app_service_time)
-        #print(device)
 
         end_time = event.event_time + event.time_until_end_service
         self.number_app_now = 1
@@ -191,15 +181,15 @@ class Controller_SMO:
         device = self._search_free_device()
         self._update_min_app_service_time(0)
         #self.pr_list_devices()
-        if self.current_app_number == 10:
+        if self.current_app_number == 5:
             print(self.current_app_number)
-            print(self._app_list_need_to_compl)
+
+        #(self._app_list_need_to_compl)
         if device:  # есть хоть 1 свободный прибор
-            if self.min_app_service_time == -1 or self.min_app_service_time > self.time_arrival_next_app:
+            if self.min_app_service_time == -1 or self.min_app_service_time > self.time_arrival_next_app: # Все приборы свободны
                 self._processing_application(device)
             else:
                 self.current_event_number += 1
-                # self.number_app_now -= 1
                 self.number_app_now -= 1
 
                 self._completes_app_processing(self.devices_list[self.device_id_completing_app])
@@ -246,15 +236,22 @@ class Controller_SMO:
         for devise in self.devices_list:
             if not devise.is_free():  # прибор работает над заявкой
                 value = devise.update_time_until_end_service_app(time)
+                self.temp[devise.get_number()] = [value, f"Заявка {devise.get_number_app()}"]
                 if value < 0:
                     print('w')
                     #raise Exception(f'valer = {value}')
                 if self.min_app_service_time > value > 0:  # and value != 0
                     self.min_app_service_time = value
                     self.device_id_completing_app = devise.get_number()
+            else:
+                self.temp[devise.get_number()] = [-1, f"Заявка {devise.get_number_app()}"]
         if np.inf == self.min_app_service_time:  # все приборы свободны
             self.min_app_service_time = -1
             self.device_id_completing_app = -1
+        #print()
+        for elem in self.temp:
+            pass
+            #print(f'{elem}: {self.temp[elem]}')
 
     def _processing_application(self, device):
         """ Обрабатывает полученную заявку или достает ее из очереди"""
@@ -266,15 +263,17 @@ class Controller_SMO:
             self.current_app_number += 1
             self.number_app_now += 1
             self._process_current_app(device)
-        #print(device)
 
     def _process_current_app(self, device: Device):
         """ Отдаем заявку на обслуживание прибору """
-        #print()
-        #print(f'сразу беру заявку self.min_app_service_time = {self.min_app_service_time}')
+        #print(f'\nсразу беру заявку self.min_app_service_time = {self.min_app_service_time}')
 
         self.event_start_time = self.event_start_time + self.time_arrival_next_app
-        #self._update_min_app_service_time(self.min_app_service_time)
+
+        if self._app_list_need_to_compl:
+            self._update_min_app_service_time(self.time_arrival_next_app)
+        else:
+            self._update_min_app_service_time(0)
 
         if self.f_selection_to_file:
             time_until_end_service = _get_service_time_by_requests(self.type_system)
@@ -284,13 +283,15 @@ class Controller_SMO:
             time_until_end_service = self.selection[str(self.current_event_number)][0]
             self.time_arrival_next_app = self.selection[str(self.current_event_number)][1]
         self._app_list_need_to_compl.append(self.current_app_number)
+
+
         device.give_task(self.current_app_number, time_until_end_service)
-        self._update_min_app_service_time(0)  # просто узнаем какой прибор быстрее закончит работу
+
         event = Event(number=self.current_event_number,
                       event_time=self.event_start_time,
                       event_type=1,
                       status_system=self.number_app_now,
-                      time_until_end_service=time_until_end_service,
+                      time_until_end_service=self.min_app_service_time,
                       wait_time=self.time_arrival_next_app,
                       number_application=self.current_app_number,
                       )
@@ -307,8 +308,6 @@ class Controller_SMO:
 
     def _process_app_from_queue(self, device: Device):
         """Обрабатывает заявку из очереди, возвращает номер обслуженной заявки"""
-        #print()
-        #print(f'беру заявку из очереди self.min_app_service_time = {self.min_app_service_time}')
         num_app = self.q.popleft()
         #print(f'Достаю заявку {num_app} из очереди')
         if self.f_selection_to_file:
@@ -330,16 +329,10 @@ class Controller_SMO:
     def _completes_app_processing(self, device: Device):
         """Завершает обработку заявки"""
         #print(device)
-
         self.event_start_time = self.event_start_time + self.min_app_service_time
-
         self.time_arrival_next_app = self.time_arrival_next_app - self.min_app_service_time
-        #print()
-        #print(f'Завершаю заявку, до обновляя  self.min_app_service_time = {self.min_app_service_time}')
-
+        #print(f'\nЗавершаю заявку, до обновляя  self.min_app_service_time = {self.min_app_service_time}')
         self._update_min_app_service_time(self.min_app_service_time)
-        #print(f'Завершаю заявку, обновляю  self.min_app_service_time = {self.min_app_service_time}')
-        #print(device)
         app_num = device.end_task()  # тут ли разместить?
         #print(f'завершил заявку {app_num}')
         event = Event(number=self.current_event_number,
@@ -352,12 +345,12 @@ class Controller_SMO:
                       )
         self.event_table.append(event)
         #print()
-        #print(f'$$$$$$$$$$$$$$$$$$$')
+
         #print(self._app_list_need_to_compl)
         #print(f'curr {app_num }')
         #print(f'Заявки, поступившие на обработку {self.lst_serv_apps_tmp}')
         if app_num in self.lst_serv_apps_tmp:
-            print('дубль')
+            #print('дубль')
             pass
         self.lst_serv_apps_tmp.append(app_num)
         self._app_list_need_to_compl.remove(app_num)
@@ -370,8 +363,7 @@ class Controller_SMO:
         #print()
         #print(f'Добавляю заявку в очередь, до обновляю  self.min_app_service_time = {self.min_app_service_time}')
         self._update_min_app_service_time(self.time_arrival_next_app)
-        #print(f'Добавляю заявку в очередь, обновляю  self.min_app_service_time = {self.min_app_service_time}')
-        #self.pr_list_devices()
+
         if self.f_selection_to_file:
             service_time = _get_service_time_by_requests(self.type_system)
             self.time_arrival_next_app = _get_time_between_applications(self.type_system)

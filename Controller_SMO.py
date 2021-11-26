@@ -84,6 +84,7 @@ class Controller_SMO:
 
        """
     selection = {}
+
     def __init__(self, num: int, type_: int, f_name: str):
 
         self.num_devices = num
@@ -94,8 +95,10 @@ class Controller_SMO:
         self.event_table: list[Event] = []
         self.application_table: list[Application] = []
         self.q = deque()
+
+        self.f_selection_to_file = True  # ?
+
         self.min_app_service_time = 0.
-        self.f_selection_to_file = True
         self.number_app_now = 0
         self.time_arrival_next_app = 0.
         self.event_start_time = 0.
@@ -239,7 +242,7 @@ class Controller_SMO:
                 self.temp[devise.get_number()] = [value, f"Заявка {devise.get_number_app()}"]
                 if value < 0:
                     print('w')
-                    #raise Exception(f'valer = {value}')
+                    raise Exception(f'valer = {value}')
                 if self.min_app_service_time > value > 0:  # and value != 0
                     self.min_app_service_time = value
                     self.device_id_completing_app = devise.get_number()
@@ -266,8 +269,6 @@ class Controller_SMO:
 
     def _process_current_app(self, device: Device):
         """ Отдаем заявку на обслуживание прибору """
-        #print(f'\nсразу беру заявку self.min_app_service_time = {self.min_app_service_time}')
-
         self.event_start_time = self.event_start_time + self.time_arrival_next_app
 
         if self._app_list_need_to_compl:
@@ -284,9 +285,8 @@ class Controller_SMO:
             self.time_arrival_next_app = self.selection[str(self.current_event_number)][1]
         self._app_list_need_to_compl.append(self.current_app_number)
 
-
         device.give_task(self.current_app_number, time_until_end_service)
-
+        self._update_min_app_service_time(0)
         event = Event(number=self.current_event_number,
                       event_time=self.event_start_time,
                       event_type=1,
@@ -344,13 +344,11 @@ class Controller_SMO:
                       number_application=app_num,
                       )
         self.event_table.append(event)
-        #print()
-
         #print(self._app_list_need_to_compl)
         #print(f'curr {app_num }')
         #print(f'Заявки, поступившие на обработку {self.lst_serv_apps_tmp}')
         if app_num in self.lst_serv_apps_tmp:
-            #print('дубль')
+            print('дубль')
             pass
         self.lst_serv_apps_tmp.append(app_num)
         self._app_list_need_to_compl.remove(app_num)

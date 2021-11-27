@@ -86,6 +86,7 @@ class Controller_SMO:
 
        """
     selection = {}
+    f_selection_to_file = True
 
     def __init__(self, num: int, type_: int, f_name: str):
 
@@ -97,8 +98,6 @@ class Controller_SMO:
         self.event_table: list[Event] = []
         self.application_table: list[Application] = []
         self.q = deque()
-
-        self.f_selection_to_file = True  # ?
 
         self.min_app_service_time = 0.
         self.number_app_now = 0

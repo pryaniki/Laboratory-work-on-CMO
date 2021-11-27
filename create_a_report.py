@@ -31,8 +31,7 @@ def get_data_for_report() -> tuple:
     tables_task_1 = event_handler(1)
     tables_task_2 = event_handler(2)
     tables_task_3 = event_handler(3)
-    for roe in tables_task_1:
-        print(roe)
+
     tables_task_4 = [], [], []
     #tables_task_4 = get_data_for_an_calc([tables_task_1, tables_task_2, tables_task_3])
 

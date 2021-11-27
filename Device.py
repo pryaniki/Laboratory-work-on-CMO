@@ -1,7 +1,10 @@
+from DeviceData import DeviceData
+
+
 class Device:
     """
 
-       Класс для представлений прибор из  системы массового обслуживания (СМО)
+       Класс для представлений прибор из системы массового обслуживания (СМО)
 
         ...
 
@@ -19,8 +22,6 @@ class Device:
         _num_serviced_applications : list (default [])
                 Список заявок, которые были обслужены прибором
 
-        _num_applications_received : int (default 0)
-                Число поступивших заявок в прибор
         _busy_time : float (default 0.)
                 Время работы (занятости) прибора
         _idle_time : float (default 0.)
@@ -34,19 +35,16 @@ class Device:
 
        """
 
-    _number = 0
-    _num_app = 0
-    _num_applications_received = 0
-    _busy_time = 0.
-    _idle_time = 0.
-    _free = True
-    _time_until_end_service_app = 0.0
-    _num_serviced_applications = []
-
     # Время обращения к прибору или время, через которое обратились к прибору
 
     def __init__(self, number=0):
         self._number = number
+        self._number = 0
+        self._num_app = 0
+        self._free = True
+        self._time_until_end_service_app = 0.0
+        self._num_serviced_applications = []
+        self.device_data = DeviceData(self._number)
 
     def __repr__(self):
         return f'device №{self._number} - {"free" if self._free else "busy"};' \
@@ -58,11 +56,13 @@ class Device:
     def give_task(self, number_app, time):
         self._num_app = number_app
         self._time_until_end_service_app = time
-        self._num_applications_received += 1
         self._free = False
+
+        self.device_data.num_applications_received += 1
 
     def end_task(self):
         self._num_serviced_applications.append(self._num_app)
+        self.device_data.num_applications_served += 1
         tmp = self._num_app
         self._num_app = -1
         self._free = True
@@ -78,9 +78,11 @@ class Device:
     def update_time_until_end_service_app(self, time: float) -> float:
         """Обновляет значение _time_until_end_service_app"""
         if self._time_until_end_service_app < time:
-            raise Exception(f'У прибора №{self._number} получается отрицательное время до конца заявки \n{self._time_until_end_service_app} - { time}')
+            raise Exception(f'У прибора №{self._number} получается отрицательное время до конца заявки'
+                            f' \n{self._time_until_end_service_app} - { time}')
         if self._time_until_end_service_app != 0 and self._time_until_end_service_app != time:
             self._time_until_end_service_app = self._time_until_end_service_app - time
+            self.device_data.operating_time += time
         else:
             return 0
 

@@ -46,8 +46,6 @@ class Controller_SMO:
         current_app_number : int (default 1)
                 Номер заявки, которая обслуживается сейчас
 
-        current_time : float (default 0.)
-                Текущее время в СМО. Время окончания работы над заявками
         min_app_service_time : float (default 0.)
                 Минимальное время обслуживания заявки
         time_arrival_next_app : float (default 0.)
@@ -109,7 +107,6 @@ class Controller_SMO:
         self.current_event_number = 1
         self.current_app_number = 1
         self.device_id_completing_app = 0
-        self.current_time = 0.
         self._app_list_need_to_complete = []
 
     def __repr__(self):
@@ -133,7 +130,6 @@ class Controller_SMO:
         self._app_list_need_to_complete.append(self.current_app_number)
         self.event_table.append(event)
         self.application_table.append(app)
-        self.current_time = self.event_start_time
 
     def _get_selection(self, f_name: str):
         """
@@ -260,7 +256,6 @@ class Controller_SMO:
         self.number_app_now += 1
 
         self.event_start_time = self.event_start_time + self.time_arrival_next_app
-        self.current_time = self.event_start_time
         if self._app_list_need_to_complete:
             self._update_min_app_service_time(self.time_arrival_next_app)
         else:
@@ -315,7 +310,6 @@ class Controller_SMO:
                       )
         self.event_table.append(event)
         self._app_list_need_to_complete.remove(app_num)
-        self.current_time = self.event_start_time
 
     def _process_app_from_queue(self, device: Device):
         """Обрабатывает заявку из очереди"""
@@ -342,7 +336,6 @@ class Controller_SMO:
 
         self.event_start_time = self.event_start_time + self.time_arrival_next_app
         self._update_min_app_service_time(self.time_arrival_next_app)
-        self.current_time = self.event_start_time
         if self.f_selection_to_file:
             service_time = _get_service_time_by_requests(self.type_system)
             self.time_arrival_next_app = _get_time_between_applications(self.type_system)

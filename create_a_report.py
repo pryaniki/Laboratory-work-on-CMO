@@ -15,7 +15,6 @@ def write_report_on_task(n_task: int, document, tables: list[[list[Application] 
         2: 'Система массового обслуживания (M|D|n).',
         3: 'Система массового обслуживания (M|M|n).'
     }
-    print(tables[0])
     document.add_paragraph(dic[n_task+1])
     widths = (Inches(0.4), Inches(1), Inches(0.3), Inches(0.3), Inches(1), Inches(1), Inches(0.3))
     fill_table_for_report(document, tables[0], widths)

@@ -18,7 +18,7 @@ class DeviceData:
                 Время работы прибора
         downtime : float (default 0.)
                 Время простоя прибора
-        device_downtime_ratio : float (default 0.)
+        downtime_ratio : float (default 0.)
                 Коэффициент простоя прибора
 
 
@@ -31,13 +31,18 @@ class DeviceData:
         self.operating_time = operating_time
         self.downtime = downtime
         self.num_applications_served = num_applications_served
+        self.downtime_ratio = 0.
 
     def __repr__(self):
         return f'Прибор №{self.number}, поступило заявок: {self.num_applications_received},' \
-               f' проработал: {self.operating_time}, время бездействия: {self.downtime}'
+               f' проработал: {self.operating_time}, время бездействия: {self.downtime},' \
+               f'коэффициент простоя прибора: {self.downtime_ratio}'
 
     def get_data_for_report(self):
-        return [self.number, self.num_applications_received, self.operating_time, self.downtime]
+        return [self.number, self.num_applications_received, self.operating_time, self.downtime_ratio]
 
-    def get_device_downtime_ratio(self, time):
-        return self.downtime/time
+    def calculate_device_downtime_ratio(self, time):
+        self.downtime = time - self.operating_time
+        self.downtime_ratio = self.downtime/time
+
+        return self.downtime_ratio

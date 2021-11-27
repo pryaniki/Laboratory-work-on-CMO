@@ -35,11 +35,8 @@ class Device:
 
        """
 
-    # Время обращения к прибору или время, через которое обратились к прибору
-
     def __init__(self, number=0):
         self._number = number
-        self._number = 0
         self._num_app = 0
         self._free = True
         self._time_until_end_service_app = 0.0

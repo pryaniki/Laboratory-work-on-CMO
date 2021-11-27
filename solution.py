@@ -21,18 +21,13 @@ def event_handler(n_task: int) -> list[list[Event] | list[Application]]:
     from constants import NUM_EVENTS, NUM_SMO
 
     f_name = f'table1_task{n_task}.txt'
-    result = Controller_SMO(NUM_SMO, n_task, f_name).start_system(NUM_EVENTS)
-
+    smo = Controller_SMO(NUM_SMO, n_task, f_name)
+    result = smo.start_system(NUM_EVENTS)
+    t_device_data = smo.get_data_for_report()
+    print(f'\ntable 3 for task {n_task}')
+    for el in t_device_data:
+        print(el)
     return result
-
-
-def get_downtime_SMO(table_1) -> float:
-    """ Считает время простоя СМО"""
-    downtime_SMO = 0  # Время простоя СМО
-    for i, val in enumerate(table_1[4]):
-        if val == -1:
-            downtime_SMO += table_1[5][i]
-    return downtime_SMO
 
 
 def get_frequency_states(counter_states: dict) -> list:

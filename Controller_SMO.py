@@ -16,6 +16,7 @@ from collections import deque
 from Event import Event
 from Application import Application
 from Device import Device
+from DeviceData import DeviceData
 
 
 class Controller_SMO:
@@ -295,7 +296,7 @@ class Controller_SMO:
             self.selection[str(num_app)] = [time_until_end_service, self.time_arrival_next_app]
         else:
             time_until_end_service = self.selection[str(num_app)][0]
-            self.time_arrival_next_app = self.selection[str(num_app)][1]  # ???
+            self.time_arrival_next_app = self.selection[str(num_app)][1]
 
         device.give_task(num_app, time_until_end_service)
         self._app_list_need_to_complete.append(num_app)
@@ -354,7 +355,12 @@ class Controller_SMO:
 
     def get_data_for_report(self):
         """Собирает с прибора данные, необходимые для отчета"""
-        pass
+        table: list[DeviceData] = []
+        for device in self.devices_list:
+            work_time = self.event_table[-1].event_time
+            device.device_data.calculate_device_downtime_ratio(work_time)
+            table.append(device.device_data.get_data_for_report())
+        return table
 
 
 def _get_time_between_applications(data):

@@ -11,7 +11,7 @@
 import numpy as np
 import json
 import os
-from collections import deque
+from collections import deque, Counter
 
 from Event import Event
 from Application import Application
@@ -360,6 +360,20 @@ class Controller_SMO:
         self.event_table.append(event)
         self.application_table.append(app)
 
+    def get_frequency_table(self):
+
+        table_1 = []
+        reversed_table_1 = []
+        for elem1 in self.event_table:
+            table_1.append(elem1.get_data_for_report())
+        for i, row in enumerate(zip(*table_1)):
+            reversed_table_1.append(list(row))
+        counter_states = Counter(sorted(reversed_table_1[3]))  # количество входа в определенное состояние
+
+        frequency_states = _get_frequency_states(counter_states)[:]
+
+        return frequency_states
+
     def get_data_for_report(self):
         """Собирает с прибора данные, необходимые для отчета"""
         table: list[DeviceData] = []
@@ -368,6 +382,48 @@ class Controller_SMO:
             device.device_data.calculate_device_downtime_ratio(work_time)
             table.append(device.device_data.get_data_for_report())
         return table
+
+    def get_column_for_table_5(self):
+        num_apps_received = 0  # Число поступивших на обслуживание заявок
+        num_apps_served = 0  # Число обслуженных заявок
+        for device in self.devices_list:
+            num_apps_received += device.device_data.num_applications_received
+            num_apps_served += device.device_data.num_applications_served
+        num_apps_received += len(self.q)
+
+        sum_column_status_system = 0.
+        queue_time = 0.
+        application_time_in_smp = 0.
+        for event in self.event_table:
+            sum_column_status_system += event.status_system
+        for app in self.application_table:
+            if app.stay_in_queue != -1:
+                queue_time += app.stay_in_queue
+                application_time_in_smp += app.service_time
+
+        return [num_apps_received, num_apps_served,
+                sum_column_status_system / 100,
+                queue_time / num_apps_served,
+                application_time_in_smp / num_apps_served,
+                ]
+
+
+def _get_frequency_states(counter_states: dict) -> list:
+    """ Находит частоты состояний СМО"""
+
+    frequency_states_1 = {}
+    frequency_states = []  # .clean
+    for state in counter_states:
+        frequency_states_1[state] = counter_states[state] / 100
+    try:
+        frequency_states_1[0]
+    except:
+        frequency_states_1[0] = 0.0
+
+    for i in range(len(frequency_states_1)):
+        frequency_states.append(frequency_states_1[i])
+
+    return frequency_states
 
 
 def _get_time_between_applications(data):

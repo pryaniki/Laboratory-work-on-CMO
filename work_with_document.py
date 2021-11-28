@@ -46,6 +46,7 @@ def set_size_fount(paragraph, size: int):
 
 def fill_table_for_report(document, data, widths):
     """Создает таблицу в документе и заполняет ее."""
+
     table = document.add_table(rows=len(data) + 1, cols=len(data[0]), style='Table Grid')
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     _set_col_widths(table, widths)
@@ -56,58 +57,63 @@ def fill_table_for_report(document, data, widths):
     return table
 
 
+def list_to_list_wrapper(table):
+    lst = []
+    for el in table:
+        lst.append(ListWrapper(el))
+    return lst
+
+
 def reverse_table(data: list):
     """ Переворачивает таблицу и добавляет по 1 строке в начало каждой строки таблицы"""
-    value_names = {
-        0: 'число заявок J(100), поступивших в СМО на интервале [0,t_соб (100)]',
-        1: 'число JF(100),  полностью обслуженных заявок на интервале  [0,t_соб (100)]',
-        2: 'среднее число заявок, находившихся в СМО, на интервале[0,t_соб (100)]',
-        3: 'среднее время пребывания заявок в очереди на интервале [0,t_соб (100)]',
-        4: 'среднее время пребывания заявок в СМО на интервале [0,t_соб (100)]',
-        5: 'коэффициент простоя прибора на интервале [0,t_соб (100)] к  t_соб (100)',
-    }
+
     res = []
 
     for i, row in enumerate(zip(*data)):
         lst = list(row)
-        lst.insert(0, value_names[i])
         res.append(ListWrapper(lst))
     return res
 
 
 def fill_table_analysis_of_calculations(document, data: list[list[ListWrapper]]):
-    """Заполнить анализ расчетов"""
+    """
+    Заполнить анализ расчетов
+
+
+    """
+    tables_3 = data[0]
+    table_for_task_5 = data[2]
+    frequency_table = data[3]
+    vector_r = data[1]
+    frequency_table_task_3 = data[4]
+
     document.add_heading(' Анализ результатов', 1)
-
-    data[0] = reverse_table(data[0])
+    document.add_heading(' Система массового обслуживания (D|M|n)', 2)
+    # t3
+    dic = {
+        1: 'Система массового обслуживания (D|M|n).',
+        2: 'Система массового обслуживания (M|D|n).',
+        3: 'Система массового обслуживания (M|M|n).'
+    }
     widths = (Inches(2), Inches(1), Inches(1), Inches(1))
-    table = fill_table_for_report(document, data[0], widths)
-    table.rows[0].cells[1].text = '(D|M|n)'
-    table.rows[0].cells[2].text = '(M|D|n)'
-    table.rows[0].cells[3].text = '(M|M|n)'
-    document.add_paragraph(f'\nОтносительные частоты пребывания СМО в состояниях\n')
+    for table, index in zip(tables_3, dic):
 
-    max_len = len(data[1][0])
-    for lst in data[1][1:]:
-        if len(lst) > max_len:
-            max_len = len(lst)
+        document.add_paragraph(dic[index])
+        _ = list_to_list_wrapper(table)
+        fill_table_for_report(document, _, widths)
+        if index != 3:
+            _ = []
+            for i, el in enumerate(frequency_table[index-1]):
+                _.append(ListWrapper([i, el]))
+            document.add_paragraph('Относительные частоты пребывания СМО в состояниях')
 
-    ### заполнить 2-ю таблицу
-    table = document.add_table(rows=max_len + 2, cols=len(data[1])+1, style='Table Grid')
-    table.alignment = WD_TABLE_ALIGNMENT.CENTER
-    widths = (Inches(0.4), Inches(0.4), Inches(0.4), Inches(0.4))
+            fill_table_for_report(document, _, (Inches(1), Inches(1)))
+    document.add_paragraph('задание 5')
+    lst = list_to_list_wrapper(reverse_table(table_for_task_5))
+    fill_table_for_report(document, lst, (Inches(1), Inches(1)))
 
-    _set_col_widths(table, widths)
-    table.rows[0].cells[1].text = '(D|M|n)'
-    table.rows[0].cells[2].text = '(M|D|n)'
-    table.rows[0].cells[3].text = '(M|M|n)'
-    table.rows[1].cells[1].text = 'Vi(100)'
-    table.rows[1].cells[2].text = 'Vi(100)'
-    table.rows[1].cells[3].text = 'Vi(100)'
+    vec_r_text = ", ".join(num_to_str(float(num)) for num in vector_r)
+    document.add_paragraph(f'r = ({vec_r_text})')
 
-    for i, line in enumerate(data[1]):
-        for j, num in enumerate(line):
-            table.rows[j + 2].cells[0].text = num_to_str(j)
-            table.rows[j + 2].cells[i+1].text = num_to_str(num)
-
-    return table
+    lst = list_to_list_wrapper(reverse_table(reverse_table(frequency_table_task_3)))
+    fill_table_for_report(document, lst, widths)

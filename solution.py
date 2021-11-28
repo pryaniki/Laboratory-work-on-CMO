@@ -4,95 +4,100 @@
 Вычисление таблиц аналитического раздела
 
 """
-
-import os
-import json
-
-
-from collections import deque, Counter
+import math
 from Controller_SMO import Controller_SMO
-from Event import Event
-from Application import Application
-from ListWrapper import ListWrapper
 
 
-def event_handler(n_task: int) -> list[list[Event] | list[Application]]:
+def event_handler(n_task: int):
     """Обработчик событий. Заполняет таблицы 1 и 2"""
     from constants import NUM_EVENTS, NUM_SMO
 
     f_name = f'table1_task{n_task}.txt'
     smo = Controller_SMO(NUM_SMO, n_task, f_name)
     result = smo.start_system(NUM_EVENTS)
+
+    return smo, result
+
+
+def get_table_with_device_data(smo):
+    """ Собирает данными о приборах для таблицы 3"""
     t_device_data = smo.get_data_for_report()
-    print(f'\ntable 3 for task {n_task}')
-    for el in t_device_data:
-        print(el)
-    return result
+
+    return t_device_data
 
 
-def get_frequency_states(counter_states: dict) -> list:
-    """ Находит частоты состояний СМО"""
-
-    frequency_states_1 = {}
-    frequency_states = []  # .clean
-    for state in counter_states:
-        frequency_states_1[state] = counter_states[state] / 100
-    try:
-        frequency_states_1[0]
-    except:
-        frequency_states_1[0] = 0.0
-
-    for i in range(len(frequency_states_1)):
-        frequency_states.append(frequency_states_1[i])
-
-    return frequency_states
+def get_data_for_table_5(smo):
+    return smo.get_column_for_table_5()
 
 
-def get_data_for_row(table: list[list[Event | Application]]) -> tuple[ListWrapper, list]:
-    """ Возвращает данные для аналитического раздела"""
-    from constants import NUM_EVENTS
-    table_1 = []
-    reversed_table_1 = []
-    table_2 = []
-    reversed_table_2 = []
-    for elem1 in table[0]:
-        table_1.append(elem1.get_data_for_report())
-
-    for elem2 in table[1]:
-        table_2.append(elem2.get_data_for_report())
-
-    for i, row in enumerate(zip(*table_1)):
-        reversed_table_1.append(list(row))
-    for i, row in enumerate(zip(*table_2)):
-        reversed_table_2.append(list(row))
-
-    app_counter = Counter(reversed_table_1[2])  # счетчик заявок(поступивших\обслуженных)
-    average_num_apps = sum(reversed_table_1[3]) / 100  # среднее время пребывания заявок в очереди на интервале
-    average_time_apps_in_queue = sum(reversed_table_2[3]) / app_counter[
-        2]  # среднее время пребывания заявок в очереди на интервале
-    border = Counter(reversed_table_2[6])[-1]
-    average_time_apps_in_SMO = sum(list(map(lambda x, y: x - y, reversed_table_2[6][:len(reversed_table_2[6]) - border],
-                                            reversed_table_2[1][:len(reversed_table_2[1]) - border]))) / app_counter[
-                                   2]  # среднее время пребывания заявок в СМО на интервале
-
-    downtime_SMO = get_downtime_SMO(reversed_table_1)  # Время простоя СМО
-    downtime_ratio_SMO = downtime_SMO / reversed_table_1[1][
-        NUM_EVENTS - 1]  # коэффициент простоя прибора на интервале
-    counter_states = Counter(sorted(reversed_table_1[3]))  # количество входа в определенное состояние
-    frequency_states = get_frequency_states(counter_states)[:]
-    return ListWrapper([app_counter[1], app_counter[2], average_num_apps,
-                        average_time_apps_in_queue, average_time_apps_in_SMO, downtime_ratio_SMO]), frequency_states
+def get_frequency_table(smo):
+    return smo.get_frequency_table()
 
 
-def get_data_for_an_calc(tables: list[list[list[Event] | list[Application]]]) -> list[list[ListWrapper | list]]:
-    """Формирует таблицу для отчета в аналитическом разделе"""
+def get_vector_r(length):
+    from constants import MU, LAMBD, NUM_SMO
+    print(f'length={length}')
+    print(f'lambd = {LAMBD}, my = {MU}')
+    vector = []
+    p = LAMBD/MU
+    v = p/NUM_SMO
+    print(f'v = {v}')
+    r0 = 0
+    for k in range(NUM_SMO):
+        r0 += p**k / math.factorial(k)
+    r0 = (r0+(p**NUM_SMO/math.factorial(NUM_SMO))*(1/(1-v)))**(-1)
 
-    table_1 = []
-    frequency_states = []
+    print(f'r0 = {r0}')
+    vector.append(r0)
+    l = 0
+    for k in range(1,  NUM_SMO+1):
+        print(k)
+        vector.append((r0 * p**k) / math.factorial(k))
 
-    for table in tables:
-        row, frequency_state = get_data_for_row(table)
-        table_1.append(row)
-        frequency_states.append(frequency_state[:])
+    for l in range(1, length-NUM_SMO):
+        print(k+l)
+        vector.append((v**l)*vector[NUM_SMO])
+    print(vector[NUM_SMO])
+    print(vector)
+    return vector
 
-    return [table_1, frequency_states]
+
+def get_frequency_table_task_3(vector_r, vector_v):
+    table = []
+    sum_r = 0
+    sum_v = 0
+    max_value = 0
+    for i in range(len(vector_v)):
+        sum_r += vector_r[i]
+        sum_v += vector_v[i]
+        value = abs(vector_v[i] - vector_r[i])
+        if value > max_value:
+            max_value = value
+        table.append([i, vector_r[i], vector_v[i], value])
+    table.append(['', sum_r, sum_v, max_value])
+    return table
+
+
+def get_data_for_an_calc(smo_list):
+    """
+    Формирует данные для отчета в аналитическом разделе
+
+    В отчете 6 таблиц и 1 вектор r(список)
+
+    """
+    # с данными о приборах
+    table_3 = []
+    table_for_task_5 = []
+
+    for i in range(3):
+        table_3.append(get_table_with_device_data(smo_list[i]))
+        table_for_task_5.append(get_data_for_table_5(smo_list[i]))
+
+    frequency_tables = [get_frequency_table(smo) for smo in smo_list]
+
+    vector_r = get_vector_r(len(frequency_tables[2]))  # !!!!!!!!!!!
+    print(len(vector_r))
+    frequency_table_task_3 = get_frequency_table_task_3(vector_r, frequency_tables[2])
+    for row in frequency_table_task_3:
+        print(row)
+    return [table_3, vector_r, table_for_task_5, frequency_tables[:2], frequency_table_task_3]

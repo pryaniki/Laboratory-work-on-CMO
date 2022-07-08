@@ -2,8 +2,5 @@ dist/
 venv/
 _pycache_/
 .idea/
-*.pdf
 *.doc
-*.docx
 *.lnk
-*.pdf

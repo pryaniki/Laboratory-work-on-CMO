@@ -17,4 +17,3 @@ def set_constants(num_smo, service_time, delta_t, lambd, mu):
     DELTA_T = delta_t
     LAMBD = lambd
     MU = mu
-

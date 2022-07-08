@@ -323,7 +323,7 @@ class Controller_SMO:
         device.give_task(num_app, service_time)
         self._app_list_need_to_complete.append(num_app)
         app = self.application_table[num_app - 1]
-        app.start_service = self.event_start_time  # ???
+        app.start_service = self.event_start_time
         app.stay_in_queue = app.start_service - app.app_time
         app.service_time = service_time
         app.end_time = app.start_service + app.service_time

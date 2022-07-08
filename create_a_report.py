@@ -3,7 +3,6 @@ from docx.shared import Inches
 
 from Application import Application
 from Event import Event
-from ListWrapper import ListWrapper
 
 from constants import set_constants as set_c
 from solution import event_handler, get_data_for_an_calc
@@ -41,7 +40,6 @@ def get_data_for_report() -> tuple:
 def create_report(variant, path_to_cond='lab_3.txt', doc_name='Report.doc'):
     """Заполняет черновую версию в файл doc_name"""
     data = get_conditions(variant, path_to_cond)
-    print(data)
     variant = data.variant
     name = data.name
     set_c(*data.data)
